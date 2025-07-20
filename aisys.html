@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f23;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-200px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: #00f5ff;
+            margin-right: 15px;
+        }
+
+        .logo h2 {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 10px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            color: #ccc;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: linear-gradient(135deg, #00f5ff 0%, #0099cc 100%);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .nav-link i {
+            margin-right: 15px;
+            width: 20px;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 60px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00f5ff 0%, #0099cc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 245, 255, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            color: #00f5ff;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00f5ff;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff 0%, #0099cc 100%);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-online {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .status-warning {
+            background: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+        }
+
+        .status-offline {
+            background: #ff4444;
+            box-shadow: 0 0 10px #ff4444;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00f5ff 0%, #0099cc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .activity-time {
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        .ai-models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .model-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .model-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .model-active {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+
+        .model-training {
+            background: rgba(255, 170, 0, 0.2);
+            color: #ffaa00;
+        }
+
+        .model-idle {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #00f5ff 0%, #0099cc 100%);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: #00f5ff;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="logo">
+            <i class="fas fa-robot"></i>
+            <h2>AI Dashboard</h2>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="#" class="nav-link active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Models</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-database"></i>
+                    <span>Data Sources</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-cog"></i>
+                    <span>Training</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    <span>Team</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-tools"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Header -->
+        <div class="header">
+            <button class="toggle-btn" id="toggleBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="user-info">
+                <div class="user-avatar">AI</div>
+                <div>
+                    <div style="font-weight: 600;">AI Administrator</div>
+                    <div style="font-size: 0.8rem; color: #ccc;">System Status: Online</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- System Performance -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">System Performance</div>
+                    <i class="card-icon fas fa-server"></i>
+                </div>
+                <div class="metric-value">98.5%</div>
+                <div class="metric-label">Overall System Health</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 98.5%;"></div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <span class="status-indicator status-online"></span>
+                    All systems operational
+                </div>
+            </div>
+
+            <!-- Active Models -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">Active AI Models</div>
+                    <i class="card-icon fas fa-brain"></i>
+                </div>
+                <div class="metric-value">24</div>
+                <div class="metric-label">Models Currently Running</div>
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>GPT Models: 8</span>
+                        <span class="status-indicator status-online"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Vision Models: 6</span>
+                        <span class="status-indicator status-online"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Custom Models: 10</span>
+                        <span class="status-indicator status-warning"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Power -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">Processing Power</div>
+                    <i class="card-icon fas fa-microchip"></i>
+                </div>
+                <div class="metric-value">2.4 TF</div>
+                <div class="metric-label">Total Computing Power</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 76%;"></div>
+                </div>
+                <div style="margin-top: 15px; color: #ccc;">
+                    GPU Utilization: 76% | CPU: 42%
+                </div>
+            </div>
+
+            <!-- API Requests -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">API Requests</div>
+                    <i class="card-icon fas fa-exchange-alt"></i>
+                </div>
+                <div class="metric-value">15.2K</div>
+                <div class="metric-label">Requests in Last 24h</div>
+                <div class="chart-container">
+                    <canvas id="apiChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Training Progress -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">Training Progress</div>
+                    <i class="card-icon fas fa-graduation-cap"></i>
+                </div>
+                <div class="metric-value">3</div>
+                <div class="metric-label">Models in Training</div>
+                <div style="margin-top: 20px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>Image Classifier</span>
+                            <span>67%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 67%;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>NLP Model</span>
+                            <span>89%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 89%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">Recent Activity</div>
+                    <i class="card-icon fas fa-clock"></i>
+                </div>
+                <div class="activity-list scrollbar">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-play"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Model Training Started</div>
+                            <div class="activity-time">2 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Data Preprocessing Complete</div>
+                            <div class="activity-time">15 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">New Dataset Uploaded</div>
+                            <div class="activity-time">1 hour ago</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Model Achieved 95% Accuracy</div>
+                            <div class="activity-time">2 hours ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Models Section -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div class="card-title">AI Model Overview</div>
+                <i class="card-icon fas fa-brain"></i>
+            </div>
+            <div class="ai-models-grid">
+                <div class="model-card">
+                    <h3>GPT-4 Turbo</h3>
+                    <div class="metric-value" style="font-size: 1.5rem;">99.2%</div>
+                    <div class="metric-label">Accuracy</div>
+                    <div class="model-status model-active">Active</div>
+                </div>
+                <div class="model-card">
+                    <h3>Vision Transformer</h3>
+                    <div class="metric-value" style="font-size: 1.5rem;">94.8%</div>
+                    <div class="metric-label">Accuracy</div>
+                    <div class="model-status model-active">Active</div>
+                </div>
+                <div class="model-card">
+                    <h3>Custom NLP</h3>
+                    <div class="metric-value" style="font-size: 1.5rem;">87.3%</div>
+                    <div class="metric-label">Accuracy</div>
+                    <div class="model-status model-training">Training</div>
+                </div>
+                <div class="model-card">
+                    <h3>Time Series</h3>
+                    <div class="metric-value" style="font-size: 1.5rem;">91.7%</div>
+                    <div class="metric-label">Accuracy</div>
+                    <div class="model-status model-idle">Idle</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div class="card-title">Quick Actions</div>
+                <i class="card-icon fas fa-bolt"></i>
+            </div>
+            <div class="quick-actions">
+                <button class="action-btn">
+                    <i class="fas fa-plus"></i> Deploy New Model
+                </button>
+                <button class="action-btn">
+                    <i class="fas fa-database"></i> Import Dataset
+                </button>
+                <button class="action-btn">
+                    <i class="fas fa-chart-bar"></i> Generate Report
+                </button>
+                <button class="action-btn">
+                    <i class="fas fa-cog"></i> System Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar toggle functionality
+        const toggleBtn = document.getElementById('toggleBtn');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        });
+
+        // Navigation active state
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // API Requests Chart
+        const ctx = document.getElementById('apiChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+                datasets: [{
+                    label: 'API Requests',
+                    data: [120, 190, 300, 500, 200, 300, 450],
+                    borderColor: '#00f5ff',
+                    backgroundColor: 'rgba(0, 245, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ccc'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ccc'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Simulate real-time updates
+        setInterval(() => {
+            // Update metrics with small random changes
+            const performanceEl = document.querySelector('.metric-value');
+            const currentPerf = parseFloat(performanceEl.textContent);
+            const newPerf = currentPerf + (Math.random() - 0.5) * 0.1;
+            performanceEl.textContent = Math.max(95, Math.min(100, newPerf)).toFixed(1) + '%';
+            
+            // Update progress bar
+            const progressBar = document.querySelector('.progress-fill');
+            progressBar.style.width = Math.max(95, Math.min(100, newPerf)).toFixed(1) + '%';
+        }, 5000);
+
+        // Quick action buttons
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.textContent.trim();
+                alert(`Action triggered: ${action}`);
+            });
+        });
+    </script>
+</body>
+</html>
